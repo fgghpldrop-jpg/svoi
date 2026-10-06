@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Svoi.Api/Svoi.Api.csproj" />
+    <Project Path="src/Svoi.Application/Svoi.Application.csproj" />
+    <Project Path="src/Svoi.Domain/Svoi.Domain.csproj" />
+    <Project Path="src/Svoi.Infrastructure/Svoi.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Svoi.Tests/Svoi.Tests.csproj" />
+  </Folder>
+</Solution>

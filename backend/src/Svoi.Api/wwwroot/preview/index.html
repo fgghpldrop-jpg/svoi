@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>СВОИ — Бобруйск</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+:root{
+  --bg:#0F1115;
+  --bg2:#16181D;
+  --bg3:#1C1F26;
+  --bg4:#22252E;
+  --glass:rgba(15,17,21,.72);
+  --glass2:rgba(255,255,255,.04);
+  --brd:rgba(255,255,255,.06);
+  --brd2:rgba(255,255,255,.08);
+  --brd3:rgba(255,255,255,.12);
+  --em:#10B981;
+  --em2:#059669;
+  --em-d:rgba(16,185,129,.12);
+  --em-g:rgba(16,185,129,.4);
+  --txt:#F2F3F5;
+  --txt2:#8E8E93;
+  --txt3:#5A5A5E;
+  --blue:#3B82F6;
+  --purple:#8B5CF6;
+  --orange:#F97316;
+  --pink:#EC4899;
+  --red:#EF4444;
+  --green:#34D399;
+  --font:'Inter',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;font-family:var(--font);color:var(--txt)}
+
+/* ═══ PHONE ═══ */
+.phone{width:min(393px,100vw);height:min(852px,100vh);background:var(--bg);position:relative;overflow:hidden;border-radius:min(44px,4vw);box-shadow:0 0 0 1px rgba(255,255,255,.08),0 40px 80px rgba(0,0,0,.8)}
+.island{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:126px;height:36px;background:#000;border-radius:18px;z-index:300}
+
+/* ═══ MAP ═══ */
+#map{position:absolute;inset:0;background:radial-gradient(ellipse at 55% 40%,#131720 0%,#0a0d12 80%);overflow:hidden}
+.map-grid{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* H3 hexagons */
+.hex{position:absolute;width:92px;height:92px;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;transition:all .3s}
+.hex.g{background:rgba(16,185,129,.22);border:1.5px solid rgba(16,185,129,.6);box-shadow:0 0 16px rgba(16,185,129,.2)}
+.hex.o{background:rgba(245,158,11,.28);border:1.5px solid rgba(245,158,11,.7);box-shadow:0 0 16px rgba(245,158,11,.2)}
+.hex.r{background:rgba(239,68,68,.35);border:2px solid rgba(239,68,68,.85);box-shadow:0 0 20px rgba(239,68,68,.3)}
+.hex-badge{background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:2px 7px;font-size:11px;font-weight:600;color:#F3F4F6;letter-spacing:.2px;backdrop-filter:blur(4px)}
+
+/* POI Squircles */
+.poi{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:pointer;transform:translateX(-50%);z-index:10;transition:transform .15s}
+.poi:active{transform:translateX(-50%) scale(.92)}
+.poi-sq{width:38px;height:38px;border-radius:12px;background:rgba(20,24,33,.92);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.5);position:relative}
+.poi.partner .poi-sq{border-color:rgba(16,185,129,.45);box-shadow:0 4px 12px rgba(0,0,0,.5),0 0 12px rgba(16,185,129,.18)}
+.poi-sq svg{width:18px;height:18px;display:block}
+.poi-dot-p{position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:3px;background:#F59E0B;box-shadow:0 0 6px rgba(245,158,11,.8)}
+.poi-nm{margin-top:4px;font-size:10px;font-weight:600;color:#CBD5E1;background:rgba(15,17,21,.85);padding:2px 7px;border-radius:6px;white-space:nowrap;backdrop-filter:blur(8px);letter-spacing:.1px;border:1px solid rgba(255,255,255,.06)}
+
+/* Topbar */
+.topbar{position:absolute;top:54px;left:14px;right:14px;height:52px;border-radius:26px;background:rgba(15,17,21,.75);backdrop-filter:blur(24px) saturate(1.4);border:1px solid var(--brd2);display:flex;align-items:center;justify-content:space-between;padding:0 8px;z-index:40;box-shadow:0 4px 20px rgba(0,0,0,.35)}
+.tb-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--brd2);background:rgba(255,255,255,.06);color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.tb-btn:active{transform:scale(.92);background:rgba(255,255,255,.12)}
+.tb-btn svg{width:20px;height:20px;display:block;pointer-events:none}
+.live{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--txt2)}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.6s ease-in-out infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.live b{color:var(--em);font-weight:800}
+
+/* Out of bounds banner */
+.oob-banner{position:absolute;top:114px;left:14px;right:14px;background:rgba(239,68,68,.16);border:1px solid rgba(239,68,68,.35);border-radius:14px;padding:8px 12px;display:none;align-items:center;justify-content:center;gap:8px;font-size:11px;font-weight:600;color:#FCA5A5;z-index:45;backdrop-filter:blur(8px);transition:all .3s}
+.oob-banner svg{width:15px;height:15px;flex-shrink:0}
+
+/* Timer selection sheet */
+.timer-modal{position:absolute;inset:0;background:rgba(0,0,0,.65);z-index:250;display:none;align-items:flex-end;padding:14px;backdrop-filter:blur(4px)}
+.timer-modal.show{display:flex}
+.timer-card{width:100%;background:#12161F;border-radius:24px;border:1px solid rgba(255,255,255,.1);padding:20px;animation:cardIn .25s ease-out}
+.timer-opt{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 16px;margin-top:10px;cursor:pointer;transition:all .15s}
+.timer-opt:active{transform:scale(.98);background:rgba(255,255,255,.08)}
+.timer-opt.rec{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.35)}
+
+/* FAB */
+.fab{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);height:48px;border:none;border-radius:24px;padding:0 24px;color:#fff;font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer;z-index:40;display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;transition:all .2s;letter-spacing:.2px}
+.fab.on{background:var(--em);box-shadow:0 6px 24px var(--em-g)}
+.fab.off{background:var(--bg3);border:1px solid var(--brd2);color:var(--txt2);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.fab:active{transform:translateX(-50%) scale(.96)}
+.fab svg{width:18px;height:18px;display:block;flex-shrink:0}
+
+/* Toast */
+.toast{position:absolute;left:50%;transform:translateX(-50%) translateY(8px);background:var(--bg3);border:1px solid var(--brd2);border-radius:14px;padding:12px 16px;max-width:240px;text-align:center;z-index:30;box-shadow:0 8px 30px rgba(0,0,0,.5);backdrop-filter:blur(16px);opacity:0;transition:all .2s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast b{font-weight:700;font-size:13px}
+.toast p{font-size:11px;color:var(--txt2);margin-top:3px;line-height:1.4}
+.toast .tp{font-size:11px;color:var(--em);font-weight:600;margin-top:5px}
+
+/* ═══ OVERLAY ═══ */
+.ov{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:80;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(3px)}
+.ov.open{opacity:1;pointer-events:all}
+
+/* ═══ DRAWER ═══ */
+.dr{position:absolute;top:0;left:0;bottom:0;width:85%;z-index:90;transform:translateX(-100%);transition:transform .32s cubic-bezier(.32,1,.23,1);display:flex;flex-direction:column;overflow:hidden}
+.dr.open{transform:translateX(0)}
+.dr-glass{position:absolute;inset:0;background:rgba(15,17,21,.82);backdrop-filter:blur(40px) saturate(1.3);border-right:1px solid var(--brd)}
+
+/* Header */
+.dr-h{position:relative;z-index:1;padding:58px 20px 18px;border-bottom:1px solid var(--brd);flex-shrink:0}
+.dr-hrow{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.dr-close{position:absolute;top:58px;right:16px;width:32px;height:32px;border-radius:50%;background:var(--glass2);border:1px solid var(--brd);color:var(--txt3);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.dr-close:hover{background:rgba(255,255,255,.08);color:var(--txt2)}
+
+/* Avatar ring */
+.ava-wrap{position:relative;width:56px;height:56px;flex-shrink:0}
+.ava-ring{position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--brd3);transition:border-color .3s}
+.ava-ring.on{border-color:var(--em);box-shadow:0 0 12px var(--em-g)}
+.ava-pulse{position:absolute;inset:-7px;border-radius:50%;border:2px solid var(--em);opacity:0;animation:avaPulse 2s ease-out infinite}
+@keyframes avaPulse{0%{transform:scale(.95);opacity:.5}100%{transform:scale(1.12);opacity:0}}
+.ava-inner{width:56px;height:56px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden}
+.ava-inner img{width:100%;height:100%;object-fit:cover}
+.ava-status{position:absolute;bottom:-1px;right:-1px;width:16px;height:16px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;border:2px solid var(--bg)}
+.ava-status i{width:9px;height:9px;border-radius:50%}
+.ava-status i.on{background:var(--green)}
+.ava-status i.off{background:var(--txt3)}
+
+/* User info */
+.u-name{font-size:18px;font-weight:700;letter-spacing:-.3px;display:flex;align-items:center;gap:6px}
+.u-vbadge{width:16px;height:16px;border-radius:50%;background:var(--em);display:inline-flex;align-items:center;justify-content:center}
+.u-vbadge svg{width:10px;height:10px}
+.u-inst{display:inline-block;background:var(--em-d);color:var(--em);font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-top:4px}
+.u-phone{font-size:12px;color:var(--txt3);margin-top:3px}
+
+/* Segment control */
+.seg{margin-top:0;background:var(--bg4);border:1px solid var(--brd);border-radius:12px;padding:11px 16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.seg:active{transform:scale(.98)}
+.seg.on{background:var(--em-d);border-color:rgba(16,185,129,.25)}
+.seg-dot{width:7px;height:7px;border-radius:50%;transition:background .2s}
+.seg-dot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+.seg-dot.off{background:var(--txt3)}
+.seg-lbl{font-size:13px;font-weight:600;transition:color .2s}
+.seg-lbl.on{color:var(--em)}
+.seg-lbl.off{color:var(--txt2)}
+
+/* ═══ MENU LIST ═══ */
+.ml{position:relative;z-index:1;flex:1;overflow-y:auto;padding:6px 0;scrollbar-width:none}
+.ml::-webkit-scrollbar{display:none}
+
+.mi{display:flex;align-items:center;gap:12px;padding:13px 20px;cursor:pointer;transition:background .12s;position:relative}
+.mi:active{background:rgba(255,255,255,.04)}
+.mi+.mi::before{content:'';position:absolute;top:0;left:68px;right:20px;height:1px;background:var(--brd)}
+
+/* Icon squircle */
+.mi-ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mi-ic svg{width:19px;height:19px}
+.mi-ic.blue{background:rgba(59,130,246,.12)}
+.mi-ic.purple{background:rgba(139,92,246,.12)}
+.mi-ic.orange{background:rgba(249,115,22,.12)}
+.mi-ic.pink{background:rgba(236,72,153,.12)}
+.mi-ic.gray{background:rgba(142,142,147,.1)}
+
+.mi-txt{flex:1;min-width:0}
+.mi-t{font-size:15px;font-weight:600;letter-spacing:-.1px}
+.mi-s{font-size:12px;color:var(--txt3);margin-top:1px}
+.mi-badge{min-width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;padding:0 7px;font-size:11px;font-weight:700;color:#fff}
+.mi-chev{font-size:16px;color:var(--txt3);font-weight:300;margin-left:2px}
+
+/* ═══ FOOTER ═══ */
+.dr-f{position:relative;z-index:1;padding:12px 20px 24px;border-top:1px solid var(--brd);flex-shrink:0}
+.inc-btn{display:flex;align-items:center;gap:8px;padding:8px 0;cursor:pointer;background:none;border:none;color:var(--txt3);font-size:13px;font-family:var(--font)}
+.inc-btn svg{width:16px;height:16px}
+.inc-btn:hover{color:var(--txt2)}
+.dr-ver{font-size:10px;color:var(--txt3);text-align:center;margin-top:8px;letter-spacing:.8px}
+
+/* ═══ MODULE PAGES ═══ */
+.pg{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;animation:pgIn .25s ease-out}
+@keyframes pgIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.pg-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--brd);flex-shrink:0}
+.pg-back{width:34px;height:34px;border-radius:50%;background:var(--glass2);border:1px solid var(--brd);color:var(--txt2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.pg-back:active{transform:scale(.9);background:rgba(255,255,255,.08)}
+.pg-title{font-size:17px;font-weight:700;letter-spacing:-.2px}
+.pg-body{flex:1;overflow-y:auto;padding:14px 16px;scrollbar-width:thin;scrollbar-color:var(--bg3) transparent}
+.pg-body::-webkit-scrollbar{width:3px}
+.pg-body::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
+
+/* ═══ CARDS ═══ */
+.card{background:var(--bg2);border:1px solid var(--brd);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,.2);animation:cardIn .3s ease-out both}
+@keyframes cardIn{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
+.card:nth-child(2){animation-delay:.04s}.card:nth-child(3){animation-delay:.08s}.card:nth-child(4){animation-delay:.12s}
+.card-t{font-size:14px;font-weight:700;letter-spacing:-.1px}
+.card-s{font-size:12px;color:var(--txt2);margin-top:3px;line-height:1.5}
+
+.btn{width:100%;height:44px;border-radius:12px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);letter-spacing:.2px;transition:all .12s;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px}
+.btn:active{transform:scale(.97)}
+.btn-em{background:var(--em);color:#fff;box-shadow:0 4px 14px var(--em-g)}
+.btn-ghost{background:var(--glass2);color:var(--txt2);border:1px solid var(--brd2)}
+.btn-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+
+.badge-em{display:inline-block;background:var(--em-d);color:var(--em);font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px}
+
+/* Section divider */
+.sec{display:flex;align-items:center;gap:10px;margin:16px 0 8px}
+.sec::before,.sec::after{content:'';flex:1;height:1px;background:var(--brd)}
+.sec span{font-size:11px;font-weight:600;color:var(--txt3);letter-spacing:.8px;white-space:nowrap}
+
+/* Progress */
+.prog{background:rgba(255,255,255,.06);border-radius:3px;height:4px;margin-top:6px;overflow:hidden}
+.prog-f{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--em),var(--em2));transition:width .4s}
+
+/* Chat items */
+.ch-row{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--bg2);border:1px solid var(--brd);margin-bottom:6px;cursor:pointer;transition:background .12s}
+.ch-row:active{background:var(--bg3)}
+.ch-ava{width:44px;height:44px;border-radius:50%;background:var(--bg3);border:1px solid var(--brd2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ch-ava svg{width:20px;height:20px}
+.ch-info{flex:1;min-width:0}
+.ch-nm{font-size:13px;font-weight:700}
+.ch-prev{font-size:11px;color:var(--txt3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch-time{font-size:10px;color:var(--txt3);flex-shrink:0}
+
+/* Chat window */
+.msg{max-width:75%}.msg.out{align-self:flex-end}.msg.in{align-self:flex-start}
+.msg-b{padding:10px 14px;border-radius:18px;font-size:13px;line-height:1.5;word-break:break-word}
+.msg.out .msg-b{background:var(--em);color:#fff;border-bottom-right-radius:4px}
+.msg.in .msg-b{background:var(--bg3);color:var(--txt);border:1px solid var(--brd);border-bottom-left-radius:4px}
+.msg-time{font-size:10px;color:var(--txt3);margin-top:2px}.msg.out .msg-time{text-align:right}
+.ch-inp-row{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--brd);background:var(--bg)}
+.ch-inp{flex:1;background:var(--bg3);border:1px solid var(--brd2);border-radius:22px;padding:10px 16px;font-size:13px;color:var(--txt);outline:none;font-family:var(--font)}
+.ch-inp:focus{border-color:var(--em)}
+.ch-inp::placeholder{color:var(--txt3)}
+.ch-send{width:40px;height:40px;border-radius:50%;border:none;background:var(--em);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ch-send svg{width:18px;height:18px}
+
+/* Coupon */
+.coup{background:var(--bg2);border:1px solid var(--brd);border-radius:14px;padding:14px;margin-bottom:10px;position:relative;overflow:hidden}
+.coup::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--em),var(--blue))}
+.coup-price{font-size:22px;font-weight:800;color:var(--em)}
+
+/* Flash */
+.flash{background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.2);border-radius:14px;padding:14px;margin-bottom:10px}
+.flash-tag{font-size:10px;font-weight:800;color:var(--orange);letter-spacing:1px}
+.flash-t{font-size:15px;font-weight:700;margin:5px 0 3px}
+
+/* Toggle */
+.tog{position:relative;width:51px;height:31px;cursor:pointer;flex-shrink:0}
+.tog input{display:none}
+.tog-tr{position:absolute;inset:0;border-radius:16px;background:var(--bg4);border:1px solid var(--brd2);transition:all .25s cubic-bezier(.34,1.56,.64,1)}
+.tog input:checked~.tog-tr{background:var(--em);border-color:transparent;box-shadow:0 0 14px var(--em-g),inset 0 1px 2px rgba(255,255,255,.2)}
+.tog-th{position:absolute;top:2.5px;left:2.5px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2);transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+.tog input:checked~.tog-th{transform:translateX(20px)}
+
+/* Auth */
+#auth{position:absolute;inset:0;background:var(--bg);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px}
+.a-logo{font-size:32px;font-weight:900;letter-spacing:-1.5px}.a-logo span{color:var(--em)}
+.a-sub{font-size:13px;color:var(--txt2);margin:8px 0 32px;text-align:center;line-height:1.5}
+.a-inp{width:100%;background:var(--bg2);border:1.5px solid var(--brd2);border-radius:12px;padding:14px 16px;font-size:15px;color:var(--txt);outline:none;font-family:var(--font);margin-bottom:12px;transition:border-color .2s}
+.a-inp:focus{border-color:var(--em)}
+.a-hint{font-size:11px;color:var(--txt3);text-align:center;margin-top:10px;line-height:1.6}.a-hint b{color:var(--em)}
+
+/* Notif */
+#notif{position:absolute;bottom:88px;left:14px;right:14px;background:var(--bg3);border:1px solid var(--brd2);border-radius:14px;padding:12px 16px;z-index:200;box-shadow:0 8px 30px rgba(0,0,0,.5);backdrop-filter:blur(12px);transform:translateY(16px);opacity:0;transition:all .25s;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+#notif.show{transform:translateY(0);opacity:1}
+.ni{font-size:18px;flex-shrink:0}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:40px 20px;color:var(--txt3);font-size:13px;line-height:1.6}
+.empty-ic{font-size:36px;margin-bottom:10px;opacity:.4}
+</style>
+</head>
+<body>
+<div class="phone">
+<div class="island"></div>
+
+<!-- AUTH -->
+<div id="auth">
+  <div class="a-logo">«<span>СВОИ</span>»</div>
+  <div class="a-sub">Гиперлокальная сеть реального времени<br>для молодёжи Бобруйска</div>
+  <div id="as1">
+    <input class="a-inp" id="phInp" type="tel" placeholder="+375 29 123-45-67" value="+375291234567">
+    <button class="btn btn-em" onclick="reqCode()">Получить код</button>
+    <div class="a-hint">Код придёт в Telegram-бот «СВОИ»<br>Dev: код <b>777777</b></div>
+  </div>
+  <div id="as2" style="display:none;width:100%">
+    <div style="font-size:12px;color:var(--txt3);text-align:center;margin-bottom:12px">Введи код из Telegram</div>
+    <input class="a-inp" id="cdInp" type="text" inputmode="numeric" placeholder="777777" style="font-size:22px;letter-spacing:10px;text-align:center">
+    <button class="btn btn-em" id="vBtn" onclick="verCode()">Войти</button>
+    <button class="btn btn-ghost" onclick="$('as2').style.display='none';$('as1').style.display='block'">← Изменить номер</button>
+  </div>
+</div>
+
+<!-- MAP -->
+<div id="map">
+  <svg class="map-grid" viewBox="0 0 393 852" xmlns="http://www.w3.org/2000/svg">
+    <line x1="0" y1="420" x2="320" y2="420" stroke="rgba(255,255,255,.04)" stroke-width="8"/>
+    <line x1="0" y1="380" x2="393" y2="380" stroke="rgba(255,255,255,.03)" stroke-width="5"/>
+    <line x1="0" y1="460" x2="393" y2="460" stroke="rgba(255,255,255,.025)" stroke-width="4"/>
+    <line x1="0" y1="520" x2="393" y2="520" stroke="rgba(255,255,255,.02)" stroke-width="3"/>
+    <line x1="0" y1="300" x2="393" y2="300" stroke="rgba(255,255,255,.02)" stroke-width="3"/>
+    <line x1="100" y1="0" x2="100" y2="852" stroke="rgba(255,255,255,.03)" stroke-width="5"/>
+    <line x1="200" y1="0" x2="200" y2="852" stroke="rgba(255,255,255,.025)" stroke-width="4"/>
+    <line x1="280" y1="0" x2="280" y2="852" stroke="rgba(255,255,255,.02)" stroke-width="3"/>
+    <!-- River -->
+    <rect x="320" y="-40" width="36" height="930" rx="18" fill="rgba(59,130,246,.08)" transform="rotate(-5,338,415)"/>
+    <!-- River -->
+    <rect x="320" y="-40" width="36" height="930" rx="18" fill="rgba(59,130,246,.08)" transform="rotate(-5,338,415)"/>
+    <text x="342" y="320" fill="rgba(59,130,246,.2)" font-family="Inter,sans-serif" font-size="8" font-weight="700" letter-spacing="2" transform="rotate(-90,342,320)">БЕРЕЗИНА</text>
+    <!-- Socialka label -->
+    <line x1="60" y1="400" x2="290" y2="400" stroke="rgba(16,185,129,.15)" stroke-width="2" stroke-dasharray="2,8"/>
+    <text x="80" y="395" fill="rgba(16,185,129,.25)" font-family="Inter,sans-serif" font-size="8" font-weight="700" letter-spacing="3">СОЦИАЛКА</text>
+
+    <!-- Cyber-Barrier: Inverted Mask + Neon Perimeter -->
+    <defs>
+      <filter id="barrierGlow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="8" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
+    </defs>
+    <!-- Outer Inverted Mask -->
+    <path d="M-20,-20 H413 V872 H-20 Z M35,180 Q120,130 240,160 Q340,210 330,380 Q310,540 250,620 Q160,650 70,580 Q20,440 35,180 Z" fill="#07090E" fill-opacity="0.88" fill-rule="evenodd"/>
+    <!-- Barrier Neon Glow -->
+    <path d="M35,180 Q120,130 240,160 Q340,210 330,380 Q310,540 250,620 Q160,650 70,580 Q20,440 35,180 Z" fill="none" stroke="#10B981" stroke-width="12" stroke-opacity="0.45" filter="url(#barrierGlow)"/>
+    <!-- Barrier Bright Core -->
+    <path d="M35,180 Q120,130 240,160 Q340,210 330,380 Q310,540 250,620 Q160,650 70,580 Q20,440 35,180 Z" fill="none" stroke="#34D399" stroke-width="2" stroke-opacity="0.9"/>
+  </svg>
+
+  <!-- H3 Neon Heatmap Polygons with Center Density Capsules -->
+  <div class="hex g" style="left:105px;top:330px"><div class="hex-badge">18 чел.</div></div>
+  <div class="hex o" style="left:180px;top:255px"><div class="hex-badge">31 чел.</div></div>
+  <div class="hex r" style="left:55px;top:248px"><div class="hex-badge">47 чел.</div></div>
+
+  <!-- Minimalist Dark Squircle POI Markers (Zenly / Urban Dark) -->
+  <div class="poi partner" style="left:165px;top:375px" onclick="showT(this,'Социалка','Главный пешеходный бульвар','Скидка 10% на кофе')">
+    <div class="poi-sq">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+      <div class="poi-dot-p"></div>
+    </div>
+    <div class="poi-nm">Социалка</div>
+  </div>
+
+  <div class="poi partner" style="left:220px;top:308px" onclick="showT(this,'Тайм-клуб 1387','Антикафе и лекторий','Скидка 20% по СВОИ')">
+    <div class="poi-sq">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="1.8" stroke-linecap="round"><path d="M10 2v2M14 2v2M6 2v2M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
+      <div class="poi-dot-p"></div>
+    </div>
+    <div class="poi-nm">Клуб 1387</div>
+  </div>
+
+  <div class="poi" style="left:174px;top:440px" onclick="showT(this,'Памятник Бобру','Символ города и фотоспот','Локация клановых квестов')">
+    <div class="poi-sq">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="1.8" stroke-linecap="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z"/></svg>
+    </div>
+    <div class="poi-nm">Бобёр</div>
+  </div>
+
+  <div class="poi partner" style="left:265px;top:225px" onclick="showT(this,'Бобруйск-Арена','Ледовый дворец и спорт','Скидка 15% на сеансы')">
+    <div class="poi-sq">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="1.8" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      <div class="poi-dot-p"></div>
+    </div>
+    <div class="poi-nm">Арена</div>
+  </div>
+
+  <div class="poi partner" style="left:108px;top:500px" onclick="showT(this,'Додо Пицца','ул. Минская, 54','Промокод 10% на заказ')">
+    <div class="poi-sq">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="1.8" stroke-linecap="round"><path d="M18 2v20M2 2v8a4 4 0 0 0 4 4v8M6 2v6M10 2v8a4 4 0 0 1-4 4"/></svg>
+      <div class="poi-dot-p"></div>
+    </div>
+    <div class="poi-nm">Додо</div>
+  </div>
+
+  <div class="poi" style="left:60px;top:360px" onclick="showT(this,'Бобруйская крепость','Исторический памятник XIX века','Точка сбора кланов')">
+    <div class="poi-sq">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="1.8" stroke-linecap="round"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2 2 7h20L12 2z"/></svg>
+    </div>
+    <div class="poi-nm">Крепость</div>
+  </div>
+
+  <div class="toast" id="mapT" style="top:130px"></div>
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <button class="tb-btn" onclick="openDr()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="16" y2="12"/><line x1="4" y1="17" x2="12" y2="17"/></svg>
+    </button>
+    <div class="live"><div class="live-dot"></div><span>Бобруйск Live • <b id="wCnt" style="color:var(--em)">—</b> в сети</span></div>
+    <button class="tb-btn" onclick="pingGeo()" style="color:var(--em)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+    </button>
+  </div>
+
+  <!-- Out-of-bounds Edge Warning Banner -->
+  <div id="oobBanner" class="oob-banner">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span>Вы за пределами зоны СВОИ. Доступен режим наблюдателя</span>
+  </div>
+
+  <button class="fab on" id="fab" onclick="handleFabClick()">
+    <svg id="fabIc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="14" cy="5" r="2"/><path d="M18 17v5M10 17l-2 5M12 12V2"/><path d="M6 12l4-1 3 3 3-1"/></svg>
+    <span id="fabL">Я гуляю!</span>
+  </button>
+</div>
+
+<!-- Timer Selection Modal -->
+<div class="timer-modal" id="timerModal" onclick="closeTimerModal()">
+  <div class="timer-card" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-size:16px;font-weight:700;color:var(--txt);display:flex;align-items:center;gap:6px">
+        <span>⏱</span> Выбери время прогулки
+      </div>
+      <button style="background:none;border:none;color:var(--txt3);font-size:18px;cursor:pointer" onclick="closeTimerModal()">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--txt3);margin-bottom:14px">Твой статус отобразится на карте и привлечет единомышленников</div>
+    <div class="timer-opt" onclick="startWalkingOption(60)">
+      <div><div style="font-size:14px;font-weight:700">1 час</div><div style="font-size:11px;color:var(--txt3)">Быстрая встреча или кофе на Социалке</div></div>
+      <div style="color:var(--txt3)">›</div>
+    </div>
+    <div class="timer-opt rec" onclick="startWalkingOption(120)">
+      <div><div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px">2 часа <span style="background:var(--em);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px">ТОП</span></div><div style="font-size:11px;color:var(--txt3)">Полноценная вечерняя прогулка</div></div>
+      <div style="color:var(--em)">›</div>
+    </div>
+    <div class="timer-opt" onclick="startWalkingOption(240)">
+      <div><div style="font-size:14px;font-weight:700">До вечера (до 23:00)</div><div style="font-size:11px;color:var(--txt3)">Для активного движа и клановых сходок</div></div>
+      <div style="color:var(--txt3)">›</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- DRAWER -->
+<div class="ov" id="ov" onclick="closeDr()"></div>
+<div class="dr" id="dr">
+  <div class="dr-glass"></div>
+
+  <!-- Header -->
+  <div class="dr-h" id="drH">
+    <button class="dr-close" onclick="closeDr()">✕</button>
+  </div>
+
+  <!-- Body -->
+  <div class="ml" id="dBody"></div>
+
+  <!-- Footer -->
+  <div class="dr-f">
+    <button class="inc-btn" onclick="togInc()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
+      Режим инкогнито
+    </button>
+    <div class="dr-ver">СВОИ · v1.0 · Бобруйск</div>
+  </div>
+</div>
+
+<div id="notif"><span class="ni" id="nI">✅</span><span id="nT"></span></div>
+</div>
+
+<script>
+const API='http://localhost:5000/api/v1';
+let tk=null,usr=null,isW=false,chatId=null;
+const $=id=>document.getElementById(id);
+
+// ═══ SVG ICON TEMPLATES ═══
+const IC={
+  msg:`<svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>`,
+  shield:`<svg viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="1.75" stroke-linecap="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>`,
+  flame:`<svg viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="1.75" stroke-linecap="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`,
+  gift:`<svg viewBox="0 0 24 24" fill="none" stroke="#EC4899" stroke-width="1.75" stroke-linecap="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13"/><path d="M19 8V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v2"/><path d="M12 8a4 4 0 0 0-4-4"/><path d="M12 8a4 4 0 0 1 4-4"/></svg>`,
+  gear:`<svg viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="1.75" stroke-linecap="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  send:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="m22 2-11 11"/></svg>`,
+  check:`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+};
+
+// ═══ AUTH ═══
+async function reqCode(){
+  const ph=$('phInp').value.trim();if(!ph)return;
+  try{await fetch(`${API}/auth/request-code`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phoneNumber:ph,telegramChatId:null})})}catch(e){}
+  $('as1').style.display='none';$('as2').style.display='block';$('cdInp').focus();
+}
+async function verCode(){
+  const ph=$('phInp').value.trim(),cd=$('cdInp').value.trim(),b=$('vBtn');
+  b.innerHTML='<div class="spin"></div>';b.disabled=true;
+  try{
+    const r=await fetch(`${API}/auth/verify-code`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phoneNumber:ph,code:cd})});
+    if(!r.ok){ntf('❌','Неверный код');b.innerHTML='Войти';b.disabled=false;return}
+    const d=await r.json();tk=d.token;usr=d.user;isW=usr.statusIsWalking;
+    try{localStorage.setItem('svoi_token',tk);localStorage.setItem('svoi_user',JSON.stringify(usr))}catch(e){}
+    $('auth').style.display='none';afterLogin();
+  }catch(e){ntf('❌','Ошибка связи');b.innerHTML='Войти';b.disabled=false}
+}
+function afterLogin(){loadW();updFab();showMenu()}
+function ah(){return{'Content-Type':'application/json','Authorization':`Bearer ${tk}`}}
+function ntf(i,t,d=3000){$('nI').textContent=i;$('nT').textContent=t;$('notif').classList.add('show');setTimeout(()=>$('notif').classList.remove('show'),d)}
+
+// ═══ MAP ═══
+async function loadW(){try{const r=await fetch(`${API}/map/walkers-count`);const d=await r.json();$('wCnt').textContent=d.activeWalkersInBobruisk??0}catch(e){$('wCnt').textContent='?'}}
+let ttm;function showT(el,nm,desc,promo){const t=$('mapT'),r=el.getBoundingClientRect(),p=el.closest('.phone').getBoundingClientRect();t.style.top=(r.bottom-p.top+8)+'px';t.innerHTML=`<b>${nm}</b><p>${desc}</p><div class="tp">${promo}</div>`;t.classList.add('show');clearTimeout(ttm);ttm=setTimeout(()=>t.classList.remove('show'),3500)}
+async function pingGeo(){if(!tk)return;try{const r=await fetch(`${API}/geo/ping`,{method:'POST',headers:ah(),body:JSON.stringify({latitude:53.1384,longitude:29.2214,accuracyMeters:10,activityType:'Walking'})});const d=await r.json();ntf('📍',`H3: ${d.h3Index?.slice(0,12)}…`);loadW()}catch(e){ntf('❌','Нет связи')}}
+function handleFabClick(){
+  if(isW){
+    togWalk();
+  }else{
+    openTimerModal();
+  }
+}
+function openTimerModal(){const m=$('timerModal');if(m)m.classList.add('show')}
+function closeTimerModal(){const m=$('timerModal');if(m)m.classList.remove('show')}
+async function startWalkingOption(minutes){
+  closeTimerModal();
+  isW=true;
+  if(!tk){updFab();showMenu();ntf('🚶',`Статус «гуляю» (${minutes} мин)`);return}
+  try{await fetch(`${API}/profile/status`,{method:'PUT',headers:ah(),body:JSON.stringify({statusIsWalking:true,durationMinutes:minutes})})}catch(e){}
+  if(usr)usr.statusIsWalking=true;
+  try{localStorage.setItem('svoi_user',JSON.stringify(usr))}catch(e){}
+  updFab();showMenu();
+  ntf('🚶',`Статус «гуляю» (${minutes} мин)`);loadW();
+}
+async function togWalk(){
+  if(!tk){isW=!isW;updFab();showMenu();return}
+  isW=!isW;
+  try{await fetch(`${API}/profile/status`,{method:'PUT',headers:ah(),body:JSON.stringify({statusIsWalking:isW,durationMinutes:120})})}catch(e){}
+  if(usr)usr.statusIsWalking=isW;
+  try{localStorage.setItem('svoi_user',JSON.stringify(usr))}catch(e){}
+  updFab();showMenu();
+  ntf(isW?'🚶':'🏠',isW?'Статус «гуляю»':'Статус «дома»');loadW();
+}
+function updFab(){
+  const f=$('fab');
+  if(!f)return;
+  if(isW){
+    f.className='fab off';
+    f.innerHTML=`<div style="display:flex;align-items:center;gap:7px"><div style="width:22px;height:22px;border-radius:11px;background:rgba(16,185,129,.15);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px"><circle cx="14" cy="4" r="2"/><path d="M18 17v5M10 17l-2 5M12 11V2M6 12l4-1 3 3 3-1"/></svg></div><span>Гуляю еще <b style="color:var(--em)">1:48</b></span></div><div style="width:1px;height:16px;background:rgba(255,255,255,.12);margin:0 2px"></div><span style="font-size:12px;color:var(--txt2);font-weight:600">Дома</span>`;
+  }else{
+    f.className='fab on';
+    f.innerHTML=`<svg id="fabIc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:18px;height:18px"><circle cx="14" cy="5" r="2"/><path d="M18 17v5M10 17l-2 5M12 12V2"/><path d="M6 12l4-1 3 3 3-1"/></svg><span id="fabL">Я гуляю!</span>`;
+  }
+}
+
+// ═══ DRAWER ═══
+function openDr(){$('dr').classList.add('open');$('ov').classList.add('open');showMenu()}
+function closeDr(){$('dr').classList.remove('open');$('ov').classList.remove('open')}
+
+function renderHeader(){
+  const u = usr || {
+    firstName: 'Артём',
+    isVerified: true,
+    institutionName: 'БГТУ · Бобруйск',
+    phoneNumber: '+375 (29) 123-45-67',
+    pointsBalance: 450
+  };
+  return `<div class="dr-hrow" onclick="openPg('profile')" style="cursor:pointer">
+    <div class="ava-wrap">
+      ${isW?'<div class="ava-pulse"></div>':''}
+      <div class="ava-ring ${isW?'on':''}"></div>
+      <div class="ava-inner">👤</div>
+      <div class="ava-status"><i class="${isW?'on':'off'}"></i></div>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div class="u-name">${u.firstName} ${u.isVerified?`<span class="u-vbadge">${IC.check}</span>`:''}</div>
+      ${u.institutionName?`<div class="u-inst">${u.institutionName}</div>`:''}
+      <div class="u-phone">${u.phoneNumber}</div>
+    </div>
+  </div>
+  <div class="seg ${isW?'on':''}" onclick="togWalk()">
+    <div class="seg-dot ${isW?'on':'off'}"></div>
+    <div class="seg-lbl ${isW?'on':'off'}">${isW?'Я гуляю · 120 мин':'Я дома'}</div>
+  </div>`;
+}
+
+// ═══ VERTICAL MENU ═══
+function showMenu(){
+  $('drH').innerHTML=`<button class="dr-close" onclick="closeDr()">✕</button>${renderHeader()}`;
+  const pts = usr?.pointsBalance ?? 450;
+  const items=[
+    {k:'chats',ic:IC.msg,cls:'blue',t:'Мессенджер',s:'Клановые и личные чаты',b:'2',bcls:'#3B82F6'},
+    {k:'clans',ic:IC.shield,cls:'purple',t:'Мои кланы',s:'Стрики и участники',b:'🔥4',bcls:'#F97316'},
+    {k:'pulse',ic:IC.flame,cls:'orange',t:'Пульс Бобруйска',s:'Flash-события и движ'},
+    {k:'market',ic:IC.gift,cls:'pink',t:'Маркет наград',s:`${pts} очков`},
+    {k:'settings',ic:IC.gear,cls:'gray',t:'Настройки',s:'Приватность и безопасность'},
+  ];
+  $('dBody').innerHTML=items.map((it,i)=>`
+    <div class="mi" onclick="openPg('${it.k}')" style="animation:cardIn .25s ${i*.04}s both">
+      <div class="mi-ic ${it.cls}">${it.ic}</div>
+      <div class="mi-txt"><div class="mi-t">${it.t}</div><div class="mi-s">${it.s}</div></div>
+      ${it.b?`<div class="mi-badge" style="background:${it.bcls}">${it.b}</div>`:''}
+      <div class="mi-chev">›</div>
+    </div>`).join('');
+}
+
+function openPg(p){const r={profile:pgProfile,chats:pgChats,clans:pgClans,pulse:pgPulse,market:pgMarket,settings:pgSettings};r[p]?.()}
+function pgShell(t,id){return`<div class="pg"><div class="pg-h"><button class="pg-back" onclick="showMenu()">‹</button><div class="pg-title">${t}</div></div><div class="pg-body" id="${id}"><div style="text-align:center;padding:30px;color:var(--txt3)">Загрузка…</div></div></div>`}
+
+// ═══ PROFILE ═══
+async function pgProfile(){
+  $('dBody').innerHTML=pgShell('Профиль','pg');
+  if(usr){try{const r=await fetch(`${API}/profile/me`,{headers:ah()});if(r.ok)usr=await r.json()}catch(e){}}
+  if(!usr){$('pg').innerHTML='<div class="empty">Не загружено</div>';return}
+  isW=usr.statusIsWalking;updFab();
+  $('pg').innerHTML=`
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+      <div class="ava-wrap" style="width:52px;height:52px"><div class="ava-ring ${isW?'on':''}"></div><div class="ava-inner" style="width:52px;height:52px;font-size:22px">👤</div></div>
+      <div><div style="font-size:17px;font-weight:800">${usr.firstName}</div>
+      <div class="badge-em" style="margin-top:4px">🪙 ${usr.pointsBalance} очков</div></div>
+    </div>
+    <div class="card"><div style="display:flex;align-items:center;justify-content:space-between">
+      <div><div class="card-t">${isW?'🚶 Я гуляю':'🏠 Я дома'}</div><div class="card-s">Статус на тепловой карте</div></div>
+      <label class="tog"><input type="checkbox" ${isW?'checked':''} onchange="togWalk();setTimeout(()=>pgProfile(),300)"><div class="tog-tr"></div><div class="tog-th"></div></label>
+    </div></div>
+    <div class="card"><div class="card-t" style="margin-bottom:6px">✨ AI-Биография</div>
+      <div class="card-s" id="bioT" style="font-style:italic">"${usr.bio||'Нажми кнопку, чтобы сгенерировать'}"</div>
+      <button class="btn btn-em" onclick="genBio()">⚡ Сгенерировать</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="card" style="text-align:center"><div style="font-size:24px;font-weight:800;color:var(--em)">${usr.pointsBalance}</div><div class="card-s">очков</div></div>
+      <div class="card" style="text-align:center"><div style="font-size:24px;font-weight:800;color:var(--purple)">—</div><div class="card-s">кланов</div></div>
+    </div>`;
+}
+async function genBio(){const el=$('bioT');if(!el)return;el.textContent='⏳ Генерация…';try{const r=await fetch(`${API}/profile/ai-bio`,{method:'POST',headers:ah(),body:JSON.stringify({personality:'дерзкий',tags:['#социалка'],hobbies:'прогулки',favoriteSpotsInBobruisk:'Социалка',musicOrVibe:'фонк'})});const d=await r.json();el.textContent=`"${d.bio}"`;if(usr)usr.bio=d.bio;ntf('✨','AI-Био обновлено!')}catch(e){el.textContent='"Легенда ночной Социалки."'}}
+
+// ═══ CHATS ═══
+let chats=[];
+async function pgChats(){
+  $('dBody').innerHTML=pgShell('Мессенджер','pg');
+  try{const r=await fetch(`${API}/chats`,{headers:ah()});chats=r.ok?await r.json():[]}catch(e){chats=[]}
+  if(!chats.length){$('pg').innerHTML='<div class="empty"><div class="empty-ic">💬</div>Нет чатов<br><span style="font-size:11px">Вступи в клан — чат появится</span></div>';return}
+  $('pg').innerHTML=chats.map(c=>`
+    <div class="ch-row" onclick="openChat('${c.id}','${(c.title||'Чат').replace(/'/g,"\\'")}')">
+      <div class="ch-ava">${c.isClanChat?IC.shield.replace('#8B5CF6','#8B5CF6'):'<span style="font-size:18px">👤</span>'}</div>
+      <div class="ch-info"><div style="display:flex;justify-content:space-between"><div class="ch-nm">${c.title||'Чат'}</div><div class="ch-time">${c.lastMessageTime?new Date(c.lastMessageTime).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}):''}</div></div>
+      <div class="ch-prev">${c.lastMessage||'Нет сообщений'}</div></div>
+    </div>`).join('');
+}
+async function openChat(id,title){
+  chatId=id;let msgs=[];
+  try{const r=await fetch(`${API}/chats/${id}/messages?limit=30`,{headers:ah()});msgs=r.ok?await r.json():[]}catch(e){}
+  const mh=msgs.length?msgs.map(m=>{const me=usr&&m.senderId===usr.id;return`<div class="msg ${me?'out':'in'}">${!me?`<div style="font-size:10px;color:var(--txt3);margin-bottom:2px">${m.senderName}</div>`:''}<div class="msg-b">${m.textContent}</div><div class="msg-time">${new Date(m.sentAt).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}</div></div>`}).join(''):'<div class="empty"><div class="empty-ic">✍️</div>Начни общение!</div>';
+  $('dBody').innerHTML=`<div class="pg"><div class="pg-h"><button class="pg-back" onclick="pgChats()">‹</button><div class="pg-title">${title}</div></div>
+  <div style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:6px" id="cMsgs">${mh}</div>
+  <div class="ch-inp-row"><input class="ch-inp" id="mInp" placeholder="Сообщение…" onkeydown="if(event.key==='Enter')sendM()"><button class="ch-send" onclick="sendM()">${IC.send}</button></div></div>`;
+  const el=$('cMsgs');if(el)el.scrollTop=el.scrollHeight;
+}
+function sendM(){const inp=$('mInp');const t=inp?.value.trim();if(!t||!chatId)return;inp.value='';const el=$('cMsgs');if(el){el.innerHTML+=`<div class="msg out"><div class="msg-b">${t}</div><div class="msg-time">${new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}</div></div>`;el.scrollTop=el.scrollHeight}}
+
+// ═══ CLANS ═══
+async function pgClans(){
+  $('dBody').innerHTML=pgShell('Мои кланы','pg');
+  let my=[],disc=[];
+  try{const[r1,r2]=await Promise.all([fetch(`${API}/clans/my`,{headers:ah()}),fetch(`${API}/clans/discover`,{headers:ah()})]);my=r1.ok?await r1.json():[];disc=r2.ok?await r2.json():[]}catch(e){}
+  const rc=(c,mine)=>{const q=Math.max(2,Math.ceil(c.memberCount*0.6)),pct=Math.min(100,Math.round(c.memberCount/c.maxMembers*100));
+  return`<div class="card" ${mine?'style="border-color:rgba(16,185,129,.2)"':''}>
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px"><div><span class="badge-em" style="font-size:10px">${c.tag}</span>${c.isCurrentUserLeader?' <span style="display:inline-block;background:rgba(59,130,246,.12);color:var(--blue);font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px">Лидер</span>':''}</div><div style="font-size:12px;font-weight:700;color:var(--orange)">🔥 ${c.currentStreak}</div></div>
+    <div class="card-t">${c.title}</div><div class="card-s">${c.description||''}</div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--txt3);margin-top:6px"><span>👥 ${c.memberCount}/${c.maxMembers}</span><span>K = <b style="color:var(--em)">${q}</b></span></div>
+    <div class="prog"><div class="prog-f" style="width:${pct}%"></div></div>
+    ${!mine&&c.isOpenForJoin?`<button class="btn btn-em" onclick="joinC('${c.id}')">Подать заявку</button>`:''}
+  </div>`};
+  $('pg').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div><div style="font-size:15px;font-weight:700">Мои кланы</div><div style="font-size:11px;color:var(--txt3)">${my.length}/5</div></div>
+      <button class="btn btn-em" style="width:auto;padding:0 16px;height:36px;margin:0;font-size:12px" onclick="showCreateClan()">+ Создать</button>
+    </div>
+    ${my.length?my.map(c=>rc(c,true)).join(''):'<div class="empty"><div class="empty-ic">🛡️</div>Нет кланов</div>'}
+    <div class="sec"><span>ОТКРЫТЫЕ</span></div>
+    ${disc.filter(c=>!c.isCurrentUserMember).slice(0,5).map(c=>rc(c,false)).join('')||'<div style="text-align:center;padding:12px;color:var(--txt3);font-size:12px">Нет открытых</div>'}`;
+}
+async function joinC(id){try{const r=await fetch(`${API}/clans/${id}/join-request`,{method:'POST',headers:ah()});const d=await r.json();if(r.ok)ntf('✅','Заявка отправлена!');else ntf('❌',d.error||'Ошибка')}catch(e){ntf('❌','Нет связи')}}
+function showCreateClan(){$('pg').innerHTML=`
+  <button class="btn btn-ghost" style="margin:0 0 12px;width:auto;padding:0 16px;height:36px" onclick="pgClans()">‹ Назад</button>
+  <div style="font-size:17px;font-weight:700;margin-bottom:14px">Создать клан</div>
+  <input class="a-inp" id="ct" placeholder="Название"><input class="a-inp" id="cd" placeholder="Описание"><input class="a-inp" id="cg" placeholder="Тег"><input class="a-inp" id="cm" type="number" min="3" max="15" placeholder="Макс. (3–15)">
+  <button class="btn btn-em" onclick="mkClan()">Создать</button>`}
+async function mkClan(){const t=$('ct')?.value.trim(),d=$('cd')?.value.trim(),g=$('cg')?.value.trim()||'движ',m=parseInt($('cm')?.value)||8;if(!t){ntf('❌','Укажи название');return}try{const r=await fetch(`${API}/clans`,{method:'POST',headers:ah(),body:JSON.stringify({title:t,description:d,tag:g,maxMembers:m})});const dd=await r.json();if(r.ok){ntf('🛡️',`«${t}» создан!`);pgClans()}else ntf('❌',dd.error||'Ошибка')}catch(e){ntf('❌','Нет связи')}}
+
+// ═══ PULSE ═══
+async function pgPulse(){
+  $('dBody').innerHTML=pgShell('Пульс Бобруйска','pg');
+  let news=[];try{const r=await fetch(`${API}/news`);news=r.ok?await r.json():[]}catch(e){}
+  if(!news.length){$('pg').innerHTML='<div class="empty"><div class="empty-ic">🔥</div>Нет новостей</div>';return}
+  $('pg').innerHTML=news.map(n=>{
+    if(n.isFlashEvent){const exp=n.expiresAt?new Date(n.expiresAt):null;const left=exp?Math.max(0,Math.round((exp-Date.now())/60000)):null;
+    return`<div class="flash"><div class="flash-tag">⚡ FLASH</div><div class="flash-t">${n.title}</div><div class="card-s">${n.content}</div>${left!==null?`<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(249,115,22,.12);color:var(--orange);font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;margin-top:6px">⏱ ${left} мин</div>`:''}</div>`}
+    return`<div class="card"><div class="card-t">${n.title}</div><div class="card-s" style="margin-top:3px">${n.content}</div><div style="font-size:10px;color:var(--txt3);margin-top:6px">${new Date(n.createdAt).toLocaleDateString('ru')}</div></div>`
+  }).join('');
+}
+
+// ═══ MARKET ═══
+async function pgMarket(){
+  $('dBody').innerHTML=pgShell('Маркет наград','pg');
+  let pm=[];try{const r=await fetch(`${API}/market/promocodes`,{headers:ah()});pm=r.ok?await r.json():[]}catch(e){}
+  if(usr){try{const r=await fetch(`${API}/profile/me`,{headers:ah()});if(r.ok)usr=await r.json()}catch(e){}}
+  $('pg').innerHTML=`
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:10px;color:var(--txt3);font-weight:700;letter-spacing:2px">БАЛАНС</div>
+      <div style="font-size:36px;font-weight:900;color:var(--em);margin:4px 0">🪙 ${usr?.pointsBalance??'—'}</div>
+      <div style="font-size:11px;color:var(--txt3)">+50 за каждую сходку</div>
+    </div>
+    <div class="card" style="border-color:rgba(16,185,129,.2)">
+      <div class="badge-em" style="margin-bottom:6px">🛡️ Щит — 100 очков</div>
+      <div class="card-s">Заморозка стрика на 7 дней</div>
+      <button class="btn btn-em" onclick="buyShield()">Активировать</button>
+    </div>
+    <div class="sec"><span>КУПОНЫ</span></div>
+    ${pm.filter(p=>!p.isRedeemed).map(p=>`
+    <div class="coup"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><div><div style="font-size:10px;color:var(--em);font-weight:600">${p.poiTitle||'Партнёр'}</div><div class="card-t" style="margin-top:2px">${p.title}</div></div><div class="coup-price">${p.costInPoints}</div></div>
+    <div style="font-size:10px;color:var(--txt3)">очков</div>
+    <button class="btn btn-em" onclick="redeem('${p.id}','${p.title}')">Получить</button></div>`).join('')||'<div class="empty">Нет купонов</div>'}`;
+}
+async function buyShield(){let my=[];try{my=await(await fetch(`${API}/clans/my`,{headers:ah()})).json()}catch(e){}if(!my?.length){ntf('❌','Вступи в клан');return}try{const r=await fetch(`${API}/market/buy-shield`,{method:'POST',headers:ah(),body:JSON.stringify({clanId:my[0].id})});const d=await r.json();if(r.ok){ntf('🛡️','Щит активирован!');pgMarket()}else ntf('❌',d.error||'Ошибка')}catch(e){ntf('❌','Нет связи')}}
+async function redeem(id,t){try{const r=await fetch(`${API}/market/redeem/${id}`,{method:'POST',headers:ah()});const d=await r.json();if(r.ok){ntf('🎁',`«${t}» получен!`);pgMarket()}else ntf('❌',d.error||'Ошибка')}catch(e){ntf('❌','Нет связи')}}
+
+// ═══ SETTINGS ═══
+function pgSettings(){
+  $('dBody').innerHTML=pgShell('Настройки','pg');
+  $('pg').innerHTML=`
+    <div class="card"><div class="card-t">🔐 Аккаунт</div><div class="card-s">${usr?.phoneNumber||'—'}</div><div class="card-s">${usr?.isVerified?'✅ Верифицирован':'⏳ Не верифицирован'}</div></div>
+    <div class="card"><div style="display:flex;align-items:center;justify-content:space-between"><div><div class="card-t">🕶 Инкогнито</div><div class="card-s">Скрыть из H3-карты</div></div>
+    <label class="tog"><input type="checkbox" onchange="togInc(this.checked)"><div class="tog-tr"></div><div class="tog-th"></div></label></div></div>
+    <div class="card" style="border-color:rgba(239,68,68,.15)"><div class="card-t">🚨 Безопасность</div><div class="card-s" style="margin-bottom:8px">SOS-сигнал доверенным контактам</div>
+    <button class="btn btn-red" onclick="ntf('🚨','SOS отправлен!')">Кнопка SOS</button></div>
+    <div class="card"><div class="card-t">ℹ️ О приложении</div><div class="card-s">СВОИ v1.0 · ASP.NET Core 8 · PostgreSQL<br>SignalR · Uber H3</div></div>
+    <button class="btn btn-ghost" onclick="logout()">Выйти</button>`;
+}
+async function togInc(v){try{await fetch(`${API}/profile/status`,{method:'PUT',headers:ah(),body:JSON.stringify({statusIsWalking:isW,isIncognito:v})});ntf(v?'🕶':'👁',v?'Инкогнито вкл':'Инкогнито выкл')}catch(e){}}
+function logout(){
+  tk=null;usr=null;isW=false;
+  try{localStorage.removeItem('svoi_token');localStorage.removeItem('svoi_user')}catch(e){}
+  $('auth').style.display='flex';$('as1').style.display='block';$('as2').style.display='none';closeDr();
+}
+
+// Auto-restore login
+try{
+  const savedTk=localStorage.getItem('svoi_token');
+  const savedUsr=localStorage.getItem('svoi_user');
+  if(savedTk&&savedUsr){
+    tk=savedTk;
+    usr=JSON.parse(savedUsr);
+    isW=!!usr.statusIsWalking;
+    if($('auth'))$('auth').style.display='none';
+  }
+}catch(e){}
+
+showMenu();loadW();updFab();setInterval(loadW,30000);
+</script>
+</body>
+</html>
